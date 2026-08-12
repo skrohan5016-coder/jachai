@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from jachai.checks import run_checks  # noqa: E402
-from jachai.cli import check_file, main  # noqa: E402
+from jachai.cli import check_file, iter_python_files, main  # noqa: E402
 from jachai.discover import discover, module_is_nondeterministic  # noqa: E402
 from jachai.generate import cases_for_param, guess_from_name, normalise, plan  # noqa: E402
 from jachai.model import Invocation  # noqa: E402
@@ -366,6 +366,50 @@ class TestDogfoodRegressions(unittest.TestCase):
 
         with self.assertRaises(KeyboardInterrupt):
             call(impatient, Invocation({"x": 1}, None, "t"))
+
+
+class TestDirectoryWalking(unittest.TestCase):
+    """``jachai check src/`` is a README promise, so it gets its own guards."""
+
+    def test_junk_directories_are_skipped(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "pkg").mkdir()
+            (root / "pkg" / "good.py").write_text("def f(n: int) -> int:\n    return n\n")
+            (root / "__pycache__").mkdir()
+            (root / "__pycache__" / "junk.py").write_text("def g(): pass\n")
+            (root / ".venv" / "lib").mkdir(parents=True)
+            (root / ".venv" / "lib" / "vendored.py").write_text("def h(): pass\n")
+            found = iter_python_files(root)
+            self.assertEqual([p.name for p in found], ["good.py"])
+
+    def test_skip_names_in_parent_path_do_not_hide_files(self):
+        """A project living inside a folder named 'build' must still be checked.
+
+        The skip list applies below the given path only. Matching against the
+        absolute path would silently exclude everything for such a user.
+        """
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "build" / "project"
+            root.mkdir(parents=True)
+            (root / "code.py").write_text("def f(n: int) -> int:\n    return n\n")
+            found = iter_python_files(root)
+            self.assertEqual([p.name for p in found], ["code.py"])
+
+    def test_directory_with_no_python_files_exits_two(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(main(["check", tmp]), 2)
+
+    def test_checking_a_directory_finds_the_planted_bugs(self):
+        self.assertEqual(
+            main(["check", str(EXAMPLE.parent), "--timeout", "0.3", "--json"]), 1
+        )
 
 
 class TestDeterminismCheck(unittest.TestCase):
