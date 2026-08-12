@@ -138,8 +138,8 @@ This runs on a file you were handed thirty seconds ago.
 ## Development
 
 ```bash
-python -m unittest discover -s tests -v   # 56 tests, no dependencies
-python -m jachai check jachai/*.py        # the tool, on itself
+python -m unittest discover -s tests -v   # 60 tests, no dependencies
+python -m jachai check jachai/            # the tool, on itself
 ```
 
 The second command is not a formality. Every false positive listed above was
