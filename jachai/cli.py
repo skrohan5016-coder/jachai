@@ -16,6 +16,40 @@ from .probe import load_module
 from .report import render, render_json
 
 
+#: Directories that are never worth checking: other people's code, build output,
+#: and virtual environments. Walking into a .venv turns a two-second run into a
+#: two-minute one and reports bugs the user cannot fix.
+SKIP_DIRS = frozenset(
+    {
+        "__pycache__", ".git", ".hg", ".svn", ".tox", ".nox", ".mypy_cache",
+        ".pytest_cache", ".ruff_cache", "node_modules", "build", "dist",
+        "venv", ".venv", "env", ".env", "site-packages",
+    }
+)
+
+
+def iter_python_files(path: Path) -> list[Path]:
+    """Expand a path into the Python files worth checking, sorted for stable output.
+
+    A file is returned as-is even if it is not named ``*.py`` -- if the user
+    pointed at it explicitly, they meant it. A directory is walked recursively,
+    and the skip list is applied only *below* it: someone whose project happens
+    to live inside a folder named ``build`` still gets their files checked.
+    """
+    if path.is_file():
+        return [path]
+    if not path.is_dir():
+        return []
+
+    found = []
+    for candidate in path.rglob("*.py"):
+        relative = candidate.relative_to(path).parts
+        if any(part in SKIP_DIRS or part.endswith(".egg-info") for part in relative):
+            continue
+        found.append(candidate)
+    return sorted(found)
+
+
 def check_file(
     path: Path, max_cases: int = 60, timeout: float = 2.0, include_private: bool = False
 ) -> list[FunctionReport]:
@@ -44,8 +78,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"jachai {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    check = sub.add_parser("check", help="check one or more Python files")
-    check.add_argument("paths", nargs="+", type=Path)
+    check = sub.add_parser("check", help="check Python files or directories")
+    check.add_argument("paths", nargs="+", type=Path, help="files or directories (walked recursively)")
     check.add_argument("--json", action="store_true", help="machine-readable output")
     check.add_argument("--quiet", action="store_true", help="hide functions with no findings")
     check.add_argument("--max-cases", type=int, default=60, help="input budget per function")
@@ -64,12 +98,22 @@ def build_parser() -> argparse.ArgumentParser:
 def _run_check(args: argparse.Namespace) -> int:
     exit_code = 0
 
-    for path in args.paths:
-        if not path.exists():
-            print(f"jachai: no such file: {path}", file=sys.stderr)
+    selected: list[Path] = []
+    for raw in args.paths:
+        if not raw.exists():
+            print(f"jachai: no such file: {raw}", file=sys.stderr)
             exit_code = max(exit_code, 2)
             continue
+        expanded = iter_python_files(raw)
+        if not expanded:
+            print(f"jachai: no Python files under {raw}", file=sys.stderr)
+            exit_code = max(exit_code, 2)
+            continue
+        selected.extend(expanded)
 
+    # dict.fromkeys dedupes while keeping order, so a file named both
+    # explicitly and via its directory is checked once, not twice.
+    for path in dict.fromkeys(selected):
         started = time.perf_counter()
         try:
             reports = check_file(
