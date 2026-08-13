@@ -1,0 +1,24 @@
+{
+  "case_id": "syn-crash-empty-average",
+  "source": {
+    "origin": "authored-for-benchmark",
+    "fixture": "fixtures/valid/empty_average.py",
+    "symbol": "average"
+  },
+  "language": "python",
+  "bug_category": "crash",
+  "real_or_synthetic": "synthetic",
+  "input": "values=[]",
+  "expected_behavior": "return 0.0, or raise a documented error",
+  "observed_behavior": "ZeroDivisionError from len(values)",
+  "ground_truth": {
+    "is_bug": true,
+    "verified_by": "jachai maintainer, by running the fixture and observing the stated behaviour",
+    "verified_on": "2026-08-12"
+  },
+  "jachai_expected": {
+    "outcome": "detect",
+    "kind": "crash"
+  },
+  "tool_results": []
+}

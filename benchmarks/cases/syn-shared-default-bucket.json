@@ -1,0 +1,24 @@
+{
+  "case_id": "syn-shared-default-bucket",
+  "source": {
+    "origin": "authored-for-benchmark",
+    "fixture": "fixtures/valid/shared_bucket.py",
+    "symbol": "collect"
+  },
+  "language": "python",
+  "bug_category": "shared-default",
+  "real_or_synthetic": "synthetic",
+  "input": "",
+  "expected_behavior": "each call starts with an empty bucket",
+  "observed_behavior": "one list object is shared by every call for the life of the process",
+  "ground_truth": {
+    "is_bug": true,
+    "verified_by": "jachai maintainer, by running the fixture and observing the stated behaviour",
+    "verified_on": "2026-08-12"
+  },
+  "jachai_expected": {
+    "outcome": "detect",
+    "kind": "shared-default"
+  },
+  "tool_results": []
+}

@@ -1,0 +1,24 @@
+{
+  "case_id": "syn-hang-negative-countdown",
+  "source": {
+    "origin": "authored-for-benchmark",
+    "fixture": "fixtures/valid/negative_countdown.py",
+    "symbol": "countdown"
+  },
+  "language": "python",
+  "bug_category": "hang",
+  "real_or_synthetic": "synthetic",
+  "input": "n=-1",
+  "expected_behavior": "terminate, or reject negative input",
+  "observed_behavior": "loops forever because n never reaches zero",
+  "ground_truth": {
+    "is_bug": true,
+    "verified_by": "jachai maintainer, by running the fixture and observing the stated behaviour",
+    "verified_on": "2026-08-12"
+  },
+  "jachai_expected": {
+    "outcome": "detect",
+    "kind": "hang"
+  },
+  "tool_results": []
+}

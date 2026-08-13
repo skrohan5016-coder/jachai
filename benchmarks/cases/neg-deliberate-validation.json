@@ -1,0 +1,24 @@
+{
+  "case_id": "neg-deliberate-validation",
+  "source": {
+    "origin": "authored-for-benchmark",
+    "fixture": "fixtures/valid/deliberate_validation.py",
+    "symbol": "safe_divide"
+  },
+  "language": "python",
+  "bug_category": "none",
+  "real_or_synthetic": "synthetic",
+  "input": "b=0",
+  "expected_behavior": "raise ValueError, which is the documented contract",
+  "observed_behavior": "raises ValueError exactly as designed",
+  "ground_truth": {
+    "is_bug": false,
+    "verified_by": "jachai maintainer, by running the fixture and observing the stated behaviour",
+    "verified_on": "2026-08-12"
+  },
+  "jachai_expected": {
+    "outcome": "skip"
+  },
+  "tool_results": [],
+  "notes": "Negative control for the exact-type suppression rule."
+}

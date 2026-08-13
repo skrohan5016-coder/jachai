@@ -1,0 +1,24 @@
+{
+  "case_id": "syn-contract-missing-return",
+  "source": {
+    "origin": "authored-for-benchmark",
+    "fixture": "fixtures/valid/missing_return.py",
+    "symbol": "find_user"
+  },
+  "language": "python",
+  "bug_category": "contract",
+  "real_or_synthetic": "synthetic",
+  "input": "users=[{\"name\": \"a\"}], name=\"absent\"",
+  "expected_behavior": "return a dict or declare -> dict | None",
+  "observed_behavior": "falls off the end and returns None",
+  "ground_truth": {
+    "is_bug": true,
+    "verified_by": "jachai maintainer, by running the fixture and observing the stated behaviour",
+    "verified_on": "2026-08-12"
+  },
+  "jachai_expected": {
+    "outcome": "detect",
+    "kind": "contract"
+  },
+  "tool_results": []
+}
