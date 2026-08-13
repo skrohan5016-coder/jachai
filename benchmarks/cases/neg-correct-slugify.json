@@ -1,0 +1,24 @@
+{
+  "case_id": "neg-correct-slugify",
+  "source": {
+    "origin": "authored-for-benchmark",
+    "fixture": "fixtures/valid/correct_slugify.py",
+    "symbol": "slugify"
+  },
+  "language": "python",
+  "bug_category": "none",
+  "real_or_synthetic": "synthetic",
+  "input": "text=\"\"",
+  "expected_behavior": "handle empty and non-ASCII text without complaint",
+  "observed_behavior": "handles both correctly",
+  "ground_truth": {
+    "is_bug": false,
+    "verified_by": "jachai maintainer, by running the fixture and observing the stated behaviour",
+    "verified_on": "2026-08-12"
+  },
+  "jachai_expected": {
+    "outcome": "skip"
+  },
+  "tool_results": [],
+  "notes": "Negative control. Any finding here is a false positive."
+}
