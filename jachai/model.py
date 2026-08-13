@@ -17,7 +17,7 @@ class Param:
     name: str
     annotation: str | None
     has_default: bool
-    kind: str  # "positional" | "keyword_only" | "var_positional" | "var_keyword"
+    kind: str  # "positional_only" | "positional" | "keyword_only" | "var_positional" | "var_keyword"
     mutable_default: bool = False
 
 
@@ -36,7 +36,19 @@ class FunctionSpec:
 
     @property
     def callable_params(self) -> tuple[Param, ...]:
-        return tuple(p for p in self.params if p.kind in ("positional", "keyword_only"))
+        return tuple(
+            p for p in self.params
+            if p.kind in ("positional_only", "positional", "keyword_only")
+        )
+
+    @property
+    def positional_only(self) -> tuple[str, ...]:
+        """Names that must be passed positionally, in declaration order.
+
+        ``def divide(a, b, /)`` cannot be called as ``divide(a=1, b=2)``. Losing
+        this distinction makes the checker invent a TypeError of its own making.
+        """
+        return tuple(p.name for p in self.params if p.kind == "positional_only")
 
 
 @dataclass(frozen=True)
@@ -59,6 +71,7 @@ class Invocation:
     args: dict[str, Any]
     varied: str | None  # which param was pushed to an edge, if any
     label: str
+    positional_only: tuple[str, ...] = ()  # must be passed by position, in order
 
 
 @dataclass

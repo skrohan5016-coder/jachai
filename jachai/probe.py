@@ -8,8 +8,9 @@ Three things matter here and nothing else:
     mutating a caller's list is one of the most common real bugs in generated
     code and one of the easiest to miss by reading.
 
-WARNING: importing a target module executes its top-level code. That is
-unavoidable for dynamic analysis, and is stated plainly in the README.
+WARNING: importing a target module executes its top-level code, and the calls
+happen inside this process. That makes jachai unsafe to point at untrusted
+code -- see the README. Process isolation is the next milestone.
 """
 
 from __future__ import annotations
@@ -29,8 +30,13 @@ from .model import Invocation, Outcome
 DEFAULT_TIMEOUT = 2.0
 
 
-class _Timeout(Exception):
-    pass
+class _Timeout(BaseException):
+    """Deliberately not an Exception.
+
+    Target code is full of ``except Exception: pass``. If our timeout inherited
+    from Exception, the very functions most likely to loop forever would be the
+    ones best equipped to swallow the alarm and keep looping.
+    """
 
 
 def _raise_timeout(signum, frame):  # pragma: no cover - signal path
@@ -74,12 +80,17 @@ def package_path(path: Path) -> tuple[Path, str] | None:
     if not (path.parent / "__init__.py").exists():
         return None
 
-    parts = [path.stem]
+    # A package's __init__.py *is* the package. Importing it as
+    # ``pkg.__init__`` would execute the initialiser a second time, under a
+    # second name, with whatever side effects that entails.
+    parts = [] if path.stem == "__init__" else [path.stem]
     directory = path.parent
     while (directory / "__init__.py").exists():
         parts.append(directory.name)
         directory = directory.parent
 
+    if not parts:
+        return None
     return directory, ".".join(reversed(parts))
 
 
@@ -155,10 +166,12 @@ def call(fn: Any, invocation: Invocation, timeout: float = DEFAULT_TIMEOUT) -> O
     except Exception:
         pristine = {}
 
+    positional = [args.pop(name) for name in invocation.positional_only if name in args]
+
     outcome = Outcome(invocation=invocation)
     try:
         with _muted(), time_limit(timeout):
-            outcome.returned = fn(**args)
+            outcome.returned = fn(*positional, **args)
     except _Timeout:
         outcome.timed_out = True
         outcome.exception = TimeoutError(f"no result within {timeout:g}s")
@@ -169,8 +182,11 @@ def call(fn: Any, invocation: Invocation, timeout: float = DEFAULT_TIMEOUT) -> O
         outcome.exception = exc
         return outcome
 
+    seen = dict(zip(invocation.positional_only, positional))
+    seen.update(args)
     outcome.mutated = tuple(
-        name for name, original in pristine.items() if not _same(original, args[name])
+        name for name, original in pristine.items()
+        if name in seen and not _same(original, seen[name])
     )
     return outcome
 
